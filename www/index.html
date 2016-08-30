@@ -9,30 +9,54 @@
     <script src="components/loader.js"></script>
     <script src="js/ncmb-2.1.2.min.js"></script>
     <script type="text/javascript" src="jquery.csv.js"></script>
-
     <script>
-        // Add your code here
-       
+    $(function() {
+        //mBaasの初期化
+        var APPLICATION_KEY ="70f7177b857e804f94685eae723c783d6d2939ac6060ff1b37d1678a45ef0ad2";
+        var CLIENT_KEY = "d07061c1bec2ab5d1cc41cb1a3d2370a984570bce14d0426730c322df67c01e8";
+        var ncmb = new NCMB(APPLICATION_KEY,CLIENT_KEY);
 
-        //DB
+        var Location = ncmb.DataStore("Location");
+
+        var selectVal = null;   //セレクトボックスで選択した値
+
+        //決定ボタンが押された際の処理
+        $("#get_button").click( function(){
+            selectVal = $("#select_station").val();
+            getGeoPoint(selectVal);
+        });
+
+        //DBから任意の駅の位置情報を取得する
+        function getGeoPoint(selectVal){
+            Location.equalTo("station_name", selectVal)
+                .fetchAll()
+                .then(function(results){
+                    var object = results[0];
+                    var array = [object.get("geoPoint").longitude, object.get("geoPoint").latitude];
+                    alert("目的地："+object.get("station_name")+ "\n経度：" + object.get("geoPoint").longitude + "\n緯度："+ object.get("geoPoint").latitude);
+                    return array; //経度,緯度
+                })
+                .catch(function(err){
+                    console.log(error.message);
+                    alert("位置情報が存在しません");
+                });
+        }
+    });
     </script>
 </head>
 <body>
-    <p>目的駅</p>
     <!-- 目的地を設定する -->
+    <h2>目的駅を選択してください</h2>
     <p>
-    <select name="sample1" size="2">
+    <select id="select_station" name="station" size="2">
         <option value="">選択してください</option>
-        <option value="1">東京</option>
-        <option value="2">選択肢2</option>
-        <option value="3">選択肢3</option>
-        <option value="4">選択肢4</option>
-        <option value="5">選択肢5</option>
+        <option value="東京">東京</option>
+        <option value="新宿">新宿</option>
+        <option value="原宿">原宿</option>
+        <option value="渋谷">渋谷</option>
+        <option value="目黒">目黒</option>
     </select>
     </p>
-    <p><input type="submit" value="決定"></p>
-    
-    <!-- CSVファイルの中身を表示 -->
-    
+    <input type="submit" id="get_button" value="決定" onClick = "getGeoPoint()">
 </body>
 </html>
