@@ -22,8 +22,9 @@
 
         //決定ボタンが押された際の処理
         $("#get_button").click( function(){
-            selectVal = $("#select_station").val();
-            getGeoPoint(selectVal);
+            //selectVal = $("#select_station").val();
+            //getGeoPoint(selectVal);
+            mainloop_start();
         });
 
         //DBから任意の駅の位置情報を取得する
@@ -33,13 +34,75 @@
                 .then(function(results){
                     var object = results[0];
                     var array = [object.get("geoPoint").longitude, object.get("geoPoint").latitude];
-                    alert("目的地："+object.get("station_name")+ "\n経度：" + object.get("geoPoint").longitude + "\n緯度："+ object.get("geoPoint").latitude);
+                    //alert("目的地："+object.get("station_name")+ "\n経度：" + object.get("geoPoint").longitude + "\n緯度："+ object.get("geoPoint").latitude);
                     return array; //経度,緯度
                 })
                 .catch(function(err){
                     console.log(error.message);
-                    alert("位置情報が存在しません");
+                    //alert("位置情報が存在しません");
+                    return new Array(0, 0);
                 });
+        }
+        //引数は東経を正 北緯を正とする
+        //形式: gpsDistance(引数1の経度, 引数1の緯度, 引数2の経度, 引数2の緯度)
+        //gpsDistance(139.013057, 36.322356, 139.073177, 36.383191);
+        // -> 8413.776423049037
+        //返り値の単位はm
+        function gpsDistance(aLat, aLon, bLat, bLon){
+        	// rad形式
+        	var aLatRad = aLat * Math.PI / 180;
+        	var aLonRad = aLon * Math.PI / 180;
+        	var bLatRad = bLat * Math.PI / 180;
+        	var bLonRad = bLon * Math.PI / 180;
+        	var latAve = Math.abs(aLatRad + bLatRad) / 2;
+        	var dLat = Math.abs(aLatRad - bLatRad);
+        	var dLon = Math.abs(aLonRad - bLonRad);
+        	var sinLat = Math.sin(latAve);
+        	var tmp = 1.0 - 0.00667478 * (sinLat*sinLat);
+        	var meridianRad = 6334834.0 / Math.sqrt(tmp*tmp*tmp);
+        	var dvrad = 6377397.155 / Math.sqrt(tmp);
+        	var t1 = meridianRad * dLat;
+        	var t2 = dvrad * Math.cos(latAve) * dLon;
+        	var dist = Math.sqrt((t1*t1) + (t2*t2));
+        	return dist;
+        }
+        function checkDistance(towardGPS){
+          // epsは距離の近傍(m)
+          eps = 2000;
+          //currentGPSをgetするコード
+          //currentGPS = new Array(1, 1);
+          currentGPS =
+          dis = gpsDistance(currentGPS[0], currentGPS[1], towardGPS[0], towardGPS[1]);
+          if(Math.abs(dis) < eps) {
+            return true;
+          }
+          return false;
+        }
+
+        var flag_stop = false;
+
+        function mainloop_start(){
+          //towardGPSをgetするコード
+          //一回実行すれば良い
+          selectVal = $("#select_station").val();
+          towardGPS = getGeoPoint(selectVal);
+          //towardGPS = new Array(1, 0)
+          var count = 0;
+          var timer = setInterval(function(){
+            //do something
+            console.log("do something");
+            tf = checkDistance(towardGPS);
+            if(tf == true){
+              clearInterval(timer);
+              console.log('push');
+              //push通知
+            }else if(flag_stop == true){
+              clearInterval(timer);
+            }else{
+              console.log('no push');
+            }
+            count++;
+          }, 10000); //10秒
         }
     });
     </script>
@@ -57,6 +120,7 @@
         <option value="目黒">目黒</option>
     </select>
     </p>
-    <input type="submit" id="get_button" value="決定" onClick = "getGeoPoint()">
+    <input type="submit" id="get_button" value="決定" onClick = "mainloop_start()">
 </body>
 </html>
+
